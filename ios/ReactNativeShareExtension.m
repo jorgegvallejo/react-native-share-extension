@@ -1,10 +1,13 @@
 #import "ReactNativeShareExtension.h"
 #import "React/RCTRootView.h"
 #import <MobileCoreServices/MobileCoreServices.h>
+#import <PassKit/PassKit.h>
 
 #define URL_IDENTIFIER @"public.url"
 #define IMAGE_IDENTIFIER @"public.image"
 #define TEXT_IDENTIFIER (NSString *)kUTTypePlainText
+#define PDF_IDENTIFIER (NSString *)kUTTypePDF
+#define PASS_IDENTIFIER @"com.apple.pkpass"
 
 NSExtensionContext* extensionContext;
 
@@ -35,13 +38,10 @@ RCT_EXPORT_MODULE();
     self.view = rootView;
 }
 
-
 RCT_EXPORT_METHOD(close) {
     [extensionContext completeRequestReturningItems:nil
                                   completionHandler:nil];
 }
-
-
 
 RCT_EXPORT_METHOD(openURL:(NSString *)url) {
   UIApplication *application = [UIApplication sharedApplication];
@@ -49,12 +49,7 @@ RCT_EXPORT_METHOD(openURL:(NSString *)url) {
   [application openURL:urlToOpen options:@{} completionHandler: nil];
 }
 
-
-
-RCT_REMAP_METHOD(data,
-                 resolver:(RCTPromiseResolveBlock)resolve
-                 rejecter:(RCTPromiseRejectBlock)reject)
-{
+RCT_REMAP_METHOD(data, resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject){
     [self extractDataFromContext: extensionContext withCallback:^(NSMutableArray* results, NSException* err) {
         if(err) {
             reject(@"error", err.description, nil);
@@ -118,10 +113,13 @@ RCT_REMAP_METHOD(data,
         __block NSItemProvider *urlProvider = nil;
         __block NSItemProvider *imageProvider = nil;
         __block NSItemProvider *textProvider = nil;
+        __block NSItemProvider *docProvider = nil;
+        __block NSItemProvider *passProvider = nil;
         
         NSMutableArray *results = [NSMutableArray arrayWithCapacity:10];
         
         [attachments enumerateObjectsUsingBlock:^(NSItemProvider *provider, NSUInteger idx, BOOL *stop) {
+
             if([provider hasItemConformingToTypeIdentifier:URL_IDENTIFIER]) {
                 urlProvider = provider;
                 [urlProvider loadItemForTypeIdentifier:URL_IDENTIFIER options:nil completionHandler:^(id<NSSecureCoding> item, NSError *error) {
@@ -130,7 +128,7 @@ RCT_REMAP_METHOD(data,
                     NSMutableDictionary *result = [NSMutableDictionary dictionary];
                     
                     [result setObject:[url absoluteString] forKey:@"uri"];
-                    [result setObject:[[[url absoluteString] pathExtension] lowercaseString] forKey:@"type"];
+                    [result setObject:@"text/plain" forKey:@"type"];
                     [results addObject:result];
                     
                     if(callback){
@@ -141,13 +139,18 @@ RCT_REMAP_METHOD(data,
             } else if ([provider hasItemConformingToTypeIdentifier:TEXT_IDENTIFIER]){
                 textProvider = provider;
                 [textProvider loadItemForTypeIdentifier:TEXT_IDENTIFIER options:nil completionHandler:^(id<NSSecureCoding> item, NSError *error) {
+                    
                     NSString *text = (NSString *)item;
                     NSMutableDictionary *result = [NSMutableDictionary dictionary];
+                    
                     [result setObject:text forKey: @"text"];
                     [result setObject:@"text/plain" forKey: @"type"];
                     [results addObject:result];
-                    if(callback){
-                        callback(results,nil);
+
+                    if([attachments count] == idx+1){
+                        if(callback){
+                            callback(results,nil);
+                        }
                     }
                 }];
                 //*stop = YES;
@@ -177,11 +180,43 @@ RCT_REMAP_METHOD(data,
                     
                 }];
                 //*stop = YES;
+            }else if([provider hasItemConformingToTypeIdentifier:PDF_IDENTIFIER]){
+                docProvider = provider;
+                [docProvider loadItemForTypeIdentifier:PDF_IDENTIFIER options:nil completionHandler:^(id<NSSecureCoding> item, NSError *error) {
+                    
+                    NSURL *url = (NSURL *)item;
+                    NSMutableDictionary *result = [NSMutableDictionary dictionary];
+
+                    [result setObject:[url absoluteString] forKey: @"uri"];
+                    [result setObject:[[[url absoluteString] pathExtension] lowercaseString] forKey:@"type"];
+                    [results addObject: result];
+
+                    if([attachments count] == idx+1){
+                        if(callback){
+                            callback(results,nil);
+                        }
+                    }
+                }];
+            }else if([provider hasItemConformingToTypeIdentifier:PASS_IDENTIFIER]){
+                passProvider = provider;
+                [passProvider loadItemForTypeIdentifier:PASS_IDENTIFIER options:nil completionHandler:^(id<NSSecureCoding> item, NSError *error) {
+                    
+                    NSMutableDictionary *result = [NSMutableDictionary dictionary];
+
+                    [result setObject:item forKey: @"item"];
+                    [result setObject:@"application/vnd.apple.pkpass" forKey:@"type"];
+                    [results addObject:result];
+
+                    if([attachments count] == idx+1){
+                        if(callback){
+                            callback(results,nil);
+                        }
+                    }
+                }];
             }else{
                 callback(nil, [NSException exceptionWithName:@"Error" reason:@"couldn't find provider" userInfo:nil]);
                 *stop = YES;
             }
-            NSLog(@"Reeeesults on the inside %lu",idx);
         }];
     }
     @catch (NSException *exception) {
@@ -192,3 +227,4 @@ RCT_REMAP_METHOD(data,
 }
 
 @end
+
