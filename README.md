@@ -1,6 +1,8 @@
 # React Native Share Extension
 
-This is a helper module which brings react native as an engine to drive share extension for your app.
+This is a fork of the original react-native-share-extenstion that adds a podspec file to support RN 0.62+. 
+
+Also added iOS support for sharing from Google Maps, ScreenShot Editor, and Acrobat; as well as added support for multiple file sharing and iOS Notes app (notes that include text + images).
 
 <p align="center">
     <img src ="https://raw.githubusercontent.com/alinz/react-native-share-extension/master/assets/ios-demo.gif" />
@@ -66,42 +68,6 @@ The setup requires a little bit more work. I will try to describe as detail as p
 
 <p align="center">
     <img src ="https://raw.githubusercontent.com/alinz/react-native-share-extension/master/assets/ios_step_08.png" />
-</p>
-
-- Now it's time to add our library. Right click on the `Libraries` group and select `Add Files to "Sample1"...`
-
-<p align="center">
-    <img src ="https://raw.githubusercontent.com/alinz/react-native-share-extension/master/assets/ios_step_09.png" />
-</p>
-
-- select `node_modules` > `react-native-share-extension` > `ios` > `ReactNativeShareExtension.xcodeproj`
-
-<p align="center">
-    <img src ="https://raw.githubusercontent.com/alinz/react-native-share-extension/master/assets/ios_step_10.png" />
-</p>
-
-- Now we need to tell the share extension that we want to read new header files. Click on project name (in my case `Sample1`), then click on your extension name (in my case `MyShareEx`). After that click on Build Settings and search for `Header Search Paths`
-
-<p align="center">
-    <img src ="https://raw.githubusercontent.com/alinz/react-native-share-extension/master/assets/ios_step_11.png" />
-</p>
-
-- Add the new path `$(SRCROOT)/../node_modules/react-native-share-extension/ios` with `recursive` selected
-
-<p align="center">
-    <img src ="https://raw.githubusercontent.com/alinz/react-native-share-extension/master/assets/ios_step_12.png" />
-</p>
-
-- We need to add some linker flags as well, so search for `Other Linker Flags` and add `-ObjC` and `-lc++`
-
-<p align="center">
-    <img src ="https://raw.githubusercontent.com/alinz/react-native-share-extension/master/assets/ios_step_13.png" />
-</p>
-
-- We also need to add all the static libraries such as `React` and `React Native Share Extension`. Select the `General` tab and under `Linked frameworks and Libraries` click on `+` and add all of the selected static binaries there
-
-<p align="center">
-    <img src ="https://raw.githubusercontent.com/alinz/react-native-share-extension/master/assets/ios_step_14.png" />
 </p>
 
 - We need to modify the `Info.plist` inside the extension (e.g. `MyShareEx/Info.plist`) to make sure that our share extension can connect to internet. This is useful if you need your share extension connects to your API server or react-native remote server dev. For doing that we need to `App Transport Security Settings` to `Info.plist`
