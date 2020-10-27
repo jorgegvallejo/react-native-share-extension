@@ -26,6 +26,7 @@ export default class Share extends Component {
 
   async componentDidMount() {
     try {
+      //in this fork, ShareExtension passes back an array of items
       const items = await ShareExtension.data()
       this.setState({
         items,
