@@ -7,7 +7,6 @@
 #define IMAGE_IDENTIFIER @"public.image"
 #define TEXT_IDENTIFIER (NSString *)kUTTypePlainText
 #define PDF_IDENTIFIER (NSString *)kUTTypePDF
-#define PASS_IDENTIFIER @"com.apple.pkpass"
 
 NSExtensionContext* extensionContext;
 
@@ -60,7 +59,7 @@ RCT_REMAP_METHOD(data, resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
 }
 
 - (NSString *)mimeTypeByGuessingFromData:(NSData *)data {
-
+ 
     char bytes[12] = {0};
     [data getBytes:&bytes length:12];
 
@@ -114,10 +113,10 @@ RCT_REMAP_METHOD(data, resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
         __block NSItemProvider *imageProvider = nil;
         __block NSItemProvider *textProvider = nil;
         __block NSItemProvider *docProvider = nil;
-        __block NSItemProvider *passProvider = nil;
         
         NSMutableArray *results = [NSMutableArray arrayWithCapacity:10];
         
+
         [attachments enumerateObjectsUsingBlock:^(NSItemProvider *provider, NSUInteger idx, BOOL *stop) {
 
             if([provider hasItemConformingToTypeIdentifier:URL_IDENTIFIER]) {
@@ -131,13 +130,15 @@ RCT_REMAP_METHOD(data, resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
                     [result setObject:@"text/plain" forKey:@"type"];
                     [results addObject:result];
                     
-                    if(callback){
-                        callback(results, nil);
+                    if([attachments count] == idx+1){
+                        if(callback){
+                            callback(results,nil);
+                        }
                     }
                 }];
-                //*stop = YES;
             } else if ([provider hasItemConformingToTypeIdentifier:TEXT_IDENTIFIER]){
                 textProvider = provider;
+                
                 [textProvider loadItemForTypeIdentifier:TEXT_IDENTIFIER options:nil completionHandler:^(id<NSSecureCoding> item, NSError *error) {
                     
                     NSString *text = (NSString *)item;
@@ -153,23 +154,41 @@ RCT_REMAP_METHOD(data, resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
                         }
                     }
                 }];
-                //*stop = YES;
             } else if ([provider hasItemConformingToTypeIdentifier:IMAGE_IDENTIFIER]){
                 imageProvider = provider;
+                
                 [imageProvider loadItemForTypeIdentifier:IMAGE_IDENTIFIER options:nil completionHandler:^(id<NSSecureCoding> item, NSError *error) {
                     
-                    NSURL *url = (NSURL *)item;
                     NSMutableDictionary *result = [NSMutableDictionary dictionary];
-
+                    NSURL *url = (NSURL *)item;
+                    
                     if([url isKindOfClass:[NSURL class]]){
                         [result setObject:[url absoluteString] forKey: @"uri"];
                         [result setObject:[[[url absoluteString] pathExtension] lowercaseString] forKey: @"type"];
                     }
                     else{
-                        NSData *imageData = UIImagePNGRepresentation(url);
-                        NSString *base64String = [imageData base64EncodedStringWithOptions:0];
-                        [result setObject:base64String forKey: @"base64"];
-                        [result setObject:[self mimeTypeByGuessingFromData: imageData] forKey:@"type"];
+                        
+                        if([attachments count] > 2){
+                            [result setObject:@"Too many attachments" forKey:@"error"];
+                            [results removeAllObjects];
+                            *stop = YES;
+                        }
+                        else{
+                        
+                            NSData *imageData = [NSData alloc];
+                            UIImage *img = (UIImage *)item;
+                            if([provider hasItemConformingToTypeIdentifier:@"public.png"]){
+                                imageData = UIImagePNGRepresentation(img);
+                                
+                            }
+                            else{
+                                
+                                imageData = UIImageJPEGRepresentation(img,1.0);
+                            }
+                            NSString *base64String = [imageData base64EncodedStringWithOptions:0];
+                            [result setObject:base64String forKey: @"base64"];
+                            [result setObject:[self mimeTypeByGuessingFromData: imageData] forKey:@"type"];
+                        }
                     }
                     [results addObject:result];
                     if([attachments count] == idx+1){
@@ -179,7 +198,6 @@ RCT_REMAP_METHOD(data, resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
                     }
                     
                 }];
-                //*stop = YES;
             }else if([provider hasItemConformingToTypeIdentifier:PDF_IDENTIFIER]){
                 docProvider = provider;
                 [docProvider loadItemForTypeIdentifier:PDF_IDENTIFIER options:nil completionHandler:^(id<NSSecureCoding> item, NSError *error) {
@@ -190,22 +208,6 @@ RCT_REMAP_METHOD(data, resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
                     [result setObject:[url absoluteString] forKey: @"uri"];
                     [result setObject:[[[url absoluteString] pathExtension] lowercaseString] forKey:@"type"];
                     [results addObject: result];
-
-                    if([attachments count] == idx+1){
-                        if(callback){
-                            callback(results,nil);
-                        }
-                    }
-                }];
-            }else if([provider hasItemConformingToTypeIdentifier:PASS_IDENTIFIER]){
-                passProvider = provider;
-                [passProvider loadItemForTypeIdentifier:PASS_IDENTIFIER options:nil completionHandler:^(id<NSSecureCoding> item, NSError *error) {
-                    
-                    NSMutableDictionary *result = [NSMutableDictionary dictionary];
-
-                    [result setObject:item forKey: @"item"];
-                    [result setObject:@"application/vnd.apple.pkpass" forKey:@"type"];
-                    [results addObject:result];
 
                     if([attachments count] == idx+1){
                         if(callback){
@@ -226,5 +228,9 @@ RCT_REMAP_METHOD(data, resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
     }
 }
 
-@end
++ (BOOL)requiresMainQueueSetup
+{
+  return NO; //since we don't use UIKit
+}
 
+@end
