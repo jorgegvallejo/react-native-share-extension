@@ -19,15 +19,16 @@ export default class Share extends Component {
     this.state = {
       isOpen: true,
       type: '',
-      value: ''
+      value: '',
+      items: null
     }
   }
 
   async componentDidMount() {
     try {
-      const { type, value } = await ShareExtension.data()
+      const items = await ShareExtension.data()
       this.setState({
-        type,
+        items,
         value
       })
     } catch(e) {
@@ -52,8 +53,7 @@ export default class Share extends Component {
           <View style={{ borderColor: 'green', borderWidth: 1, backgroundColor: 'white', height: 200, width: 300 }}>
             <TouchableOpacity onPress={this.closing}>
               <Text>Close</Text>
-              <Text>type: { this.state.type }</Text>
-              <Text>value: { this.state.value }</Text>
+              <Text>Items shared: { this.state.items }</Text>
             </TouchableOpacity>
           </View>
         </View>
