@@ -2,7 +2,9 @@
 
 This is a fork of the original react-native-share-extenstion that adds a podspec file to support RN 0.62+. 
 
-Also added iOS support for sharing from Google Maps, ScreenShot Editor, and Acrobat; as well as added support for multiple file sharing and iOS Notes app (notes that include text + images).
+Also added iOS support for sharing from Google Maps, ScreenShot Editor, and Acrobat; as well as added support for multiple file sharing and iOS MobileNotes (notes that include text + 1 image).
+
+In iOS there's memory limitations when handling the images passed by Apple MobileNotes to the share extension, since these "items" are UIImages loaded in memory and not the files themselves. One way we get around this is by setting a 1 image limit, though big images might still cause problems.
 
 <p align="center">
     <img src ="https://raw.githubusercontent.com/alinz/react-native-share-extension/master/assets/ios-demo.gif" />
